@@ -1,9 +1,9 @@
 # RAG Questionnaire
 
-**Generate questions in an interactive questionnaire
-Use RAG (retriever + LLM) to generate a customized question.**
+Generate questions in an interactive questionnaire
+Use RAG (retriever + LLM) to generate a customized question.
 
-# Pipeline
+**Pipeline**
 
 PDF text extraction:
 Read text from scientific PDFs.
@@ -17,6 +17,3 @@ Build a vector store for fast retrieval.
 
 Retrieve relevant chunks:
 Based on a user prompt
-
-Generate questions in an interactive questionnaire
-Use RAG (retriever + LLM) to generate a customized question.
