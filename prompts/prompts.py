@@ -7,7 +7,10 @@ QUESTIONNAIRE_PROMPT = PromptTemplate(
     You evaluate the quality of a dataset on the dimension "{dimension}"
     (The extent to which data values match real world knowledge.).
 
-    Generate exactly ONE yes/no question based on this context:
+    Use the context below as inspiration to generate exactly ONE yes/no question.
+    Reformulate the question to be specific to the dataset described above.
+    Use the dataset type and characteristics in your question rather than generic terms.
+    Context:
     {context_chunks}
 
     Dataset information:
@@ -21,6 +24,7 @@ QUESTIONNAIRE_PROMPT = PromptTemplate(
 
     Output only in this format:
     Next question : <your yes/no question>
+    Source: <name of the source document the question is based on>
     <|im_end|>
     <|im_start|>assistant
     <think>

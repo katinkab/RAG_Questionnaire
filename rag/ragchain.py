@@ -35,12 +35,13 @@ class RAGChain:
         )
 
     # -----------------------------
-    # Retrieve top-k relevant chunks
+    # Retrieve top-k relevant chunks (MMR, not similarity search)
     # -----------------------------
     def retrieve_chunks(self, dataset_info: str, top_k: int = None):
         if top_k is None:
             top_k = self.retriever.search_kwargs.get("k", 2)
-        return self.retriever.vectorstore.similarity_search(dataset_info, k=top_k)
+        self.retriever.search_kwargs["k"] = top_k
+        return self.retriever.invoke(dataset_info)
     # -----------------------------
     # Generate a single question
     # -----------------------------

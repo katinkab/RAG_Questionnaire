@@ -1,6 +1,6 @@
 # RAG Questionnaire
 
-Generate questions in an interactive questionnaire
+Generate questions in an interactive questionnaire.
 Use RAG (retriever + LLM) to generate a customized question.
 
 **Pipeline**
