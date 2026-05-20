@@ -10,7 +10,7 @@ from rag.ragchain import RAGChain
 from transformers import logging
 logging.set_verbosity_error()
 
-MODEL_PATH = "/home/becker21/llmmodels/qwen3-8b-q4_k_m.gguf"
+MODEL_PATH = "/scratch2/fast/becker21/models/Qwen_Qwen3-32B-Q4_K_M.gguf"
 VECTORSTORE_PATH = "rag_vectorstore"
 DATA_PATH = "data"
 DIMENSION = "Plausibility"
@@ -56,6 +56,15 @@ if "used_chunks" not in st.session_state:
 if "questionnaire_finished" not in st.session_state:
     st.session_state.questionnaire_finished = False
 
+if "depth" not in st.session_state:
+    st.session_state.depth = 0
+
+if "current_context" not in st.session_state:
+    st.session_state.current_context = None
+
+if "satisfaction" not in st.session_state:
+    st.session_state.satisfaction = []
+
 def generate_next_question(answer_text):
     st.session_state.dataset_info_list.append(answer_text)
     combined = "\n".join(st.session_state.dataset_info_list)
@@ -74,6 +83,8 @@ def generate_next_question(answer_text):
         f"{chunk.page_content.strip()} (Source: {chunk.metadata.get('source', 'unknown')})"
         for chunk in retrieved_chunks
     ])
+    st.session_state.current_context = context_text  
+
 
     raw_output = st.session_state.rag_chain.generate_question(
         context_chunks=context_text,
@@ -95,13 +106,27 @@ def generate_next_question(answer_text):
 
     return question, source
 
+def parse_question(raw_output):
+    question = ""
+    source = ""
+    for line in raw_output.splitlines():
+        if "Next question" in line:
+            question = line.replace("Next question :", "").replace("Next question:", "").strip()
+        if "Source:" in line:
+            source = line.replace("Source:", "").strip()
+    return question, source
+
 # Show history
-if st.session_state.history:
-    st.subheader("Previous questions")
-    for item in st.session_state.history:
+for item in st.session_state.history:
         with st.container():
             st.markdown(f"**Q:** {item['question']}")
-            st.markdown(f"**A:** {item['answer']}")
+            if item.get('satisfactory') is not None:
+                indicator = "🟢" if item['satisfactory'] else "🔴"
+                if "Don't know" in item['answer']:
+                    indicator = "🟡"
+                st.markdown(f"**A:** {indicator} {item['answer']}")
+            else:
+                st.markdown(f"**A:** {item['answer']}")
             if item.get('source'):
                 st.caption(f"Source: {item['source']}")
             st.divider()
@@ -187,20 +212,42 @@ elif st.session_state.current_question:
         if extra.strip():
             full_answer += f" — {extra.strip()}"
 
+        with st.spinner("Evaluating answer..."):
+            if answer_button == "Don't know":
+                satisfactory = False
+            else:
+                satisfactory = st.session_state.rag_chain.is_answer_satisfactory(
+                    question=st.session_state.current_question,
+                    answer=full_answer
+                )
+
         st.session_state.history.append({
             "question": st.session_state.current_question,
             "answer": full_answer,
-            "source": st.session_state.current_source
+            "source": st.session_state.current_source,
+            "satisfactory": satisfactory
         })
 
-        with st.spinner("Generating next question..."):
-            question, source = generate_next_question(full_answer)
+        if not satisfactory and st.session_state.depth < 2:
+            with st.spinner("Generating follow-up question..."):
+                raw_output = st.session_state.rag_chain.generate_followup_question(
+                    question=st.session_state.current_question,
+                    answer=full_answer,
+                    context_chunks=st.session_state.current_context,
+                    dataset_info="\n".join(st.session_state.dataset_info_list),
+                    dimension=DIMENSION
+                )
+            question, source = parse_question(raw_output)
+            st.session_state.depth += 1
+        else:
+            st.session_state.depth = 0
+            with st.spinner("Generating next question..."):
+                question, source = generate_next_question(full_answer)
 
         if question:
             st.session_state.current_question = question
             st.session_state.current_source = source
         else:
-            st.session_state.current_question = None
-            st.success("Questionnaire complete!")
+            st.session_state.questionnaire_finished = True
 
         st.rerun()

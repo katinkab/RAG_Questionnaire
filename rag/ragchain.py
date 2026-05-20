@@ -75,3 +75,52 @@ class RAGChain:
         """
         result = self.llm.generate([prompt])
         return result.generations[0][0].text
+
+    def is_answer_satisfactory(self, question: str, answer: str) -> bool:
+        prompt = f"""<|im_start|>system
+        You are a data quality expert. Judge if an answer to a data quality question indicates good data quality.<|im_end|>
+        <|im_start|>user
+        Question: {question}
+        Answer: {answer}
+
+        Does this answer indicate GOOD data quality? 
+        For example: "Yes, data is anonymized" = good. "No, data is not anonymized" = not good.
+        Reply with only YES or NO.<|im_end|>
+        <|im_start|>assistant
+        <think>
+
+        </think>
+
+        """
+        result = self.llm.generate([prompt])
+        text = result.generations[0][0].text.strip().upper()
+        return "YES" in text
+
+    def generate_followup_question(self, question: str, answer: str, context_chunks: str, dataset_info: str, dimension: str) -> str:
+        prompt = f"""<|im_start|>system
+        You are a data quality expert generating follow-up questions.<|im_end|>
+        <|im_start|>user
+        The previous question was: {question}
+        The user answered: {answer}
+        This answer requires deeper exploration.
+
+        Context:
+        {context_chunks}
+
+        Dataset: {dataset_info}
+        Dimension: {dimension}
+
+        Generate ONE deeper yes/no follow-up question to better understand the issue.
+
+        Output format:
+        Next question : <your yes/no question>
+        Source: <source document>
+        <|im_end|>
+        <|im_start|>assistant
+        <think>
+
+        </think>
+
+        """
+        result = self.llm.generate([prompt])
+        return result.generations[0][0].text    
