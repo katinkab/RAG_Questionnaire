@@ -10,20 +10,20 @@ from rag.ragchain import RAGChain
 from transformers import logging
 logging.set_verbosity_error()
 
-MODEL_PATH = "/scratch2/fast/becker21/models/Qwen_Qwen3-32B-Q4_K_M.gguf"
+MODEL_PATH = "/home/becker21/llmmodels/qwen3-8b-q4_k_m.gguf"
 VECTORSTORE_PATH = "rag_vectorstore"
 DATA_PATH = "data"
 DIMENSION = "Plausibility"
 
-st.set_page_config(page_title="Data Quality Questionnaire", layout="centered")
-st.title("Data Quality Questionnaire")
+st.set_page_config(page_title="Interactive Data Quality Questionnaire For AI In Medicine", layout="centered")
+st.title("Interactive Data Quality Questionnaire For AI In Medicine")
 st.caption(f"Dimension: {DIMENSION}")
 
 @st.cache_resource
 def load_rag_chain():
     texts = extract_all_pdfs(DATA_PATH)
     chunks = chunk_texts(texts)
-    shutil.rmtree(VECTORSTORE_PATH, ignore_errors=True)
+    #shutil.rmtree(VECTORSTORE_PATH, ignore_errors=True)
     create_vectorstore(chunks)
     rag_chain = RAGChain(
         vectorstore_path=VECTORSTORE_PATH,
@@ -52,6 +52,9 @@ if "dataset_info_list" not in st.session_state:
 
 if "used_chunks" not in st.session_state:
     st.session_state.used_chunks = set()
+
+if "questionnaire_finished" not in st.session_state:
+    st.session_state.questionnaire_finished = False
 
 def generate_next_question(answer_text):
     st.session_state.dataset_info_list.append(answer_text)
@@ -105,8 +108,8 @@ if st.session_state.history:
 
 # First input or current question
 if st.session_state.current_question is None and not st.session_state.history:
-    st.subheader("Which data types exist in your data?")
-    dataset_description = st.text_area("Describe your dataset:", key="initial_input")
+    st.subheader("Which data types exist in your data set?")
+    dataset_description = st.text_area("Describe your dataset in a few words:", key="initial_input")
     if st.button("Start questionnaire"):
         if dataset_description.strip():
             with st.spinner("Generating first question..."):
@@ -115,11 +118,45 @@ if st.session_state.current_question is None and not st.session_state.history:
                 st.session_state.current_question = question
                 st.session_state.current_source = source
                 st.session_state.history.append({
-                    "question": "Which data types exist in your data?",
+                    "question": "Which data types exist in your data set?",
                     "answer": dataset_description,
                     "source": None
                 })
                 st.rerun()
+
+elif st.session_state.questionnaire_finished:
+
+    st.success("Questionnaire finished.")
+
+    st.subheader("Questionnaire Summary")
+
+    summary_text = ""
+
+    for item in st.session_state.history:
+        st.markdown(f"**Q:** {item['question']}")
+        st.markdown(f"**A:** {item['answer']}")
+
+        summary_text += f"Q: {item['question']}\n"
+        summary_text += f"A: {item['answer']}\n\n"
+
+        if item.get("source"):
+            st.caption(f"Source: {item['source']}")
+            summary_text += f"Source: {item['source']}\n\n"
+
+        st.divider()
+
+    st.download_button(
+        label="Download questionnaire",
+        data=summary_text,
+        file_name="questionnaire_summary.txt",
+        mime="text/plain"
+    )
+
+    if st.button("Start new questionnaire"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+
+        st.rerun()                
 
 elif st.session_state.current_question:
     st.subheader("Current question")
@@ -127,7 +164,7 @@ elif st.session_state.current_question:
     if st.session_state.current_source:
         st.caption(f"Source: {st.session_state.current_source}")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     answer_button = None
     with col1:
         if st.button("Yes", use_container_width=True):
@@ -138,8 +175,12 @@ elif st.session_state.current_question:
     with col3:
         if st.button("Don't know", use_container_width=True):
             answer_button = "Don't know"
+    with col4:
+        if st.button("Exit", use_container_width=True):
+            st.session_state.questionnaire_finished = True
+            st.rerun()
 
-    extra = st.text_area("Optional: add more details", key="extra_input")
+    extra = st.text_area("Add more details to your answer (optional)", key="extra_input")
 
     if answer_button:
         full_answer = answer_button
