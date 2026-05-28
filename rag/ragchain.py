@@ -41,7 +41,14 @@ class RAGChain:
         if top_k is None:
             top_k = self.retriever.search_kwargs.get("k", 2)
         self.retriever.search_kwargs["k"] = top_k
-        return self.retriever.invoke(dataset_info)
+        chunks = self.retriever.invoke(dataset_info)
+    
+        # filter out chunks that look like mangled table content
+        clean_chunks = [c for c in chunks 
+                        if len(c.page_content.split()) > 10  # skip very short chunks
+                        and c.page_content.count('|') < 3]   # skip chunks with table remnants
+    
+        return clean_chunks if clean_chunks else chunks
     # -----------------------------
     # Generate a single question
     # -----------------------------

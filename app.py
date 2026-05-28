@@ -23,7 +23,7 @@ st.caption(f"Dimension: {DIMENSION}")
 def load_rag_chain():
     texts = extract_all_pdfs(DATA_PATH)
     chunks = chunk_texts(texts)
-    #shutil.rmtree(VECTORSTORE_PATH, ignore_errors=True)
+    shutil.rmtree(VECTORSTORE_PATH, ignore_errors=True)
     create_vectorstore(chunks)
     rag_chain = RAGChain(
         vectorstore_path=VECTORSTORE_PATH,
@@ -72,9 +72,19 @@ def generate_next_question(answer_text):
     st.session_state.dataset_info_list.append(answer_text)
     combined = "\n".join(st.session_state.dataset_info_list)
 
-    search_query = f"Dataset description: {combined} Focus: {DIMENSION} Already covered: {' '.join(st.session_state.generated_questions)}"
+    if st.session_state.generated_questions:
+        expanded = st.session_state.rag_chain.expand_answer(
+            answer=answer_text,
+            last_question=st.session_state.generated_questions[-1],
+            dataset_info=combined
+        )
+    else:
+        expanded = answer_text
 
-    retrieved_chunks = st.session_state.rag_chain.retrieve_chunks(search_query, top_k=10)
+    already_covered = st.session_state.generated_questions
+    search_query = f"Dataset description: {combined} Expanded context: {expanded} Focus: {DIMENSION} Already covered (do not retrieve similar content): {' '.join(already_covered)}"
+
+    retrieved_chunks = st.session_state.rag_chain.retrieve_chunks(search_query, top_k=3)
     retrieved_chunks = [c for c in retrieved_chunks if c.page_content not in st.session_state.used_chunks]
     for c in retrieved_chunks:
         st.session_state.used_chunks.add(c.page_content)
@@ -87,6 +97,7 @@ def generate_next_question(answer_text):
         for chunk in retrieved_chunks
     ])
     st.session_state.current_context = context_text  
+    st.session_state.last_context = context_text
 
 
     raw_output = st.session_state.rag_chain.generate_question(
@@ -192,6 +203,9 @@ elif st.session_state.current_question:
     st.markdown(f"**{st.session_state.current_question}**")
     if st.session_state.current_source:
         st.caption(f"Source: {st.session_state.current_source}")
+    if st.session_state.get('last_context'):
+        with st.expander("Show retrieved context"):
+            st.text(st.session_state.last_context)
 
     col1, col2, col3, col4 = st.columns(4)
     answer_button = None
