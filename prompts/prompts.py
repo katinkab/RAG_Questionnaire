@@ -16,7 +16,7 @@ QUESTIONNAIRE_PROMPT = PromptTemplate(
     Dataset information:
     {dataset_info}
 
-    Already generated questions (do not repeat):
+    Already generated questions (do NOT repeat or ask anything with similar meaning):
     {generated_questions}
 
     Collected information on the datset:

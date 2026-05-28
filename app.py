@@ -56,14 +56,17 @@ if "used_chunks" not in st.session_state:
 if "questionnaire_finished" not in st.session_state:
     st.session_state.questionnaire_finished = False
 
-if "depth" not in st.session_state:
-    st.session_state.depth = 0
+#if "depth" not in st.session_state:
+#    st.session_state.depth = 0
 
-if "current_context" not in st.session_state:
-    st.session_state.current_context = None
+#if "current_context" not in st.session_state:
+#    st.session_state.current_context = None
 
-if "satisfaction" not in st.session_state:
-    st.session_state.satisfaction = []
+#if "satisfaction" not in st.session_state:
+#    st.session_state.satisfaction = []
+
+if "input_counter" not in st.session_state:
+    st.session_state.input_counter = 0
 
 def generate_next_question(answer_text):
     st.session_state.dataset_info_list.append(answer_text)
@@ -120,13 +123,14 @@ def parse_question(raw_output):
 for item in st.session_state.history:
         with st.container():
             st.markdown(f"**Q:** {item['question']}")
-            if item.get('satisfactory') is not None:
-                indicator = "🟢" if item['satisfactory'] else "🔴"
-                if "Don't know" in item['answer']:
-                    indicator = "🟡"
-                st.markdown(f"**A:** {indicator} {item['answer']}")
-            else:
-                st.markdown(f"**A:** {item['answer']}")
+            st.markdown(f"**A:** {item['answer']}")
+            #if item.get('satisfactory') is not None:
+            #    indicator = "🟢" if item['satisfactory'] else "🔴"
+            #    if "Don't know" in item['answer']:
+            #        indicator = "🟡"
+            #    st.markdown(f"**A:** {indicator} {item['answer']}")
+            #else:
+            #    st.markdown(f"**A:** {item['answer']}")
             if item.get('source'):
                 st.caption(f"Source: {item['source']}")
             st.divider()
@@ -205,44 +209,21 @@ elif st.session_state.current_question:
             st.session_state.questionnaire_finished = True
             st.rerun()
 
-    extra = st.text_area("Add more details to your answer (optional)", key="extra_input")
+    extra = st.text_area("Add more details to your answer (optional)", key=f"extra_input_{st.session_state.input_counter}")
 
     if answer_button:
         full_answer = answer_button
         if extra.strip():
             full_answer += f" — {extra.strip()}"
 
-        with st.spinner("Evaluating answer..."):
-            if answer_button == "Don't know":
-                satisfactory = False
-            else:
-                satisfactory = st.session_state.rag_chain.is_answer_satisfactory(
-                    question=st.session_state.current_question,
-                    answer=full_answer
-                )
-
         st.session_state.history.append({
             "question": st.session_state.current_question,
             "answer": full_answer,
-            "source": st.session_state.current_source,
-            "satisfactory": satisfactory
+            "source": st.session_state.current_source
         })
 
-        if not satisfactory and st.session_state.depth < 2:
-            with st.spinner("Generating follow-up question..."):
-                raw_output = st.session_state.rag_chain.generate_followup_question(
-                    question=st.session_state.current_question,
-                    answer=full_answer,
-                    context_chunks=st.session_state.current_context,
-                    dataset_info="\n".join(st.session_state.dataset_info_list),
-                    dimension=DIMENSION
-                )
-            question, source = parse_question(raw_output)
-            st.session_state.depth += 1
-        else:
-            st.session_state.depth = 0
-            with st.spinner("Generating next question..."):
-                question, source = generate_next_question(full_answer)
+        with st.spinner("Generating next question..."):
+            question, source = generate_next_question(full_answer)
 
         if question:
             st.session_state.current_question = question
@@ -250,4 +231,5 @@ elif st.session_state.current_question:
         else:
             st.session_state.questionnaire_finished = True
 
+        st.session_state.input_counter += 1
         st.rerun()
