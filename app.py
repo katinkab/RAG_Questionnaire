@@ -16,6 +16,15 @@ DATA_PATH = "data"
 DIMENSION = "Plausibility"
 
 st.set_page_config(page_title="Interactive Data Quality Questionnaire For AI In Medicine", layout="centered")
+st.markdown("""
+    <style>
+    .block-container {
+        max-width: 900px;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
 st.title("Interactive Data Quality Questionnaire For AI In Medicine")
 st.caption(f"Dimension: {DIMENSION}")
 
@@ -144,7 +153,7 @@ for item in st.session_state.history:
             #    st.markdown(f"**A:** {item['answer']}")
             if item.get('source'):
                 st.caption(f"Source: {item['source']}")
-            st.divider()
+            st.markdown("<hr style='margin: 4px 0; border-color: #eee;'>", unsafe_allow_html=True)
 
 # First input or current question
 if st.session_state.current_question is None and not st.session_state.history:
