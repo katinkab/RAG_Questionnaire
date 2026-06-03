@@ -13,7 +13,11 @@ logging.set_verbosity_error()
 MODEL_PATH = "/scratch2/fast/becker21/models/Qwen_Qwen3-32B-Q4_K_M.gguf"
 VECTORSTORE_PATH = "rag_vectorstore"
 DATA_PATH = "data"
-DIMENSION = "Plausibility"
+DIMENSIONS = [
+    ("Plausibility", "The extent to which data values match real world knowledge."),
+    ("Traceability", "The extent to which data origins and transformations are documented, data lineage is available."),
+    ("Compliance", "The extent to which the dataset and data values are in accordance with laws, regulations or standards.")
+]
 
 st.set_page_config(page_title="Interactive Data Quality Questionnaire For AI In Medicine", layout="centered")
 st.markdown("""
@@ -26,7 +30,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 st.title("Interactive Data Quality Questionnaire For AI In Medicine")
-st.caption(f"Dimension: {DIMENSION}")
+#st.caption(f"Dimension: {DIMENSION}")
+
 
 @st.cache_resource
 def load_rag_chain():
@@ -77,6 +82,24 @@ if "questionnaire_finished" not in st.session_state:
 if "input_counter" not in st.session_state:
     st.session_state.input_counter = 0
 
+if "dimension_index" not in st.session_state:
+    st.session_state.dimension_index = 0
+
+
+
+def current_dimension():
+    return DIMENSIONS[st.session_state.dimension_index][0]
+
+def current_dimension_def():
+    return DIMENSIONS[st.session_state.dimension_index][1]
+
+def add_dimension_to_history():
+    st.session_state.history.append({
+        "type": "dimension",
+        "dimension": current_dimension(),
+        "definition": current_dimension_def()
+    })
+
 def generate_next_question(answer_text):
     st.session_state.dataset_info_list.append(answer_text)
     combined = "\n".join(st.session_state.dataset_info_list)
@@ -91,7 +114,7 @@ def generate_next_question(answer_text):
         expanded = answer_text
 
     already_covered = st.session_state.generated_questions
-    search_query = f"Dataset description: {combined} Expanded context: {expanded} Focus: {DIMENSION} Already covered (do not retrieve similar content): {' '.join(already_covered)}"
+    search_query = f"Dataset description: {combined} Expanded context: {expanded} Focus: {current_dimension()} Already covered (do not retrieve similar content): {' '.join(already_covered)}"
 
     retrieved_chunks = st.session_state.rag_chain.retrieve_chunks(search_query, top_k=3)
     retrieved_chunks = [c for c in retrieved_chunks if c.page_content not in st.session_state.used_chunks]
@@ -113,7 +136,7 @@ def generate_next_question(answer_text):
         context_chunks=context_text,
         dataset_info=combined,
         generated_questions=st.session_state.generated_questions,
-        dimension=DIMENSION
+        dimension=current_dimension()
     )
 
     question = ""
@@ -142,6 +165,14 @@ def parse_question(raw_output):
 # Show history
 for item in st.session_state.history:
         with st.container():
+
+            #Dimension header block
+            if item.get("type") == "dimension":
+                st.subheader(f"Dimension: {item['dimension']}")
+                st.caption(item["definition"])
+                st.divider()
+                continue
+
             st.markdown(f"**Q:** {item['question']}")
             st.markdown(f"**A:** {item['answer']}")
             #if item.get('satisfactory') is not None:
@@ -161,6 +192,16 @@ if st.session_state.current_question is None and not st.session_state.history:
     dataset_description = st.text_area("Describe your dataset in a few words:", key="initial_input")
     if st.button("Start questionnaire"):
         if dataset_description.strip():
+
+            st.session_state.dimension_index = 0
+
+            # ✅ ADD THIS HERE (first dimension header)
+            st.session_state.history.append({
+                "type": "dimension",
+                "dimension": current_dimension(),
+                "definition": current_dimension_def()
+            })
+
             with st.spinner("Generating first question..."):
                 question, source = generate_next_question(dataset_description)
             if question:
@@ -182,6 +223,13 @@ elif st.session_state.questionnaire_finished:
     summary_text = ""
 
     for item in st.session_state.history:
+        #Dimension header block
+        if item.get("type") == "dimension":
+            st.subheader(f"Dimension: {item['dimension']}")
+            st.caption(item["definition"])
+            st.divider()
+            continue
+
         st.markdown(f"**Q:** {item['question']}")
         st.markdown(f"**A:** {item['answer']}")
 
@@ -208,6 +256,11 @@ elif st.session_state.questionnaire_finished:
         st.rerun()                
 
 elif st.session_state.current_question:
+
+    st.caption(
+        f"Dimension: {current_dimension()} — {current_dimension_def()}"
+    )
+
     st.subheader("Current question")
     st.markdown(f"**{st.session_state.current_question}**")
     if st.session_state.current_source:
@@ -252,7 +305,32 @@ elif st.session_state.current_question:
             st.session_state.current_question = question
             st.session_state.current_source = source
         else:
-            st.session_state.questionnaire_finished = True
+            next_index = st.session_state.dimension_index + 1
+
+            if next_index < len(DIMENSIONS):
+                st.session_state.dimension_index = next_index
+
+                # reset retrieval state for the new dimension
+                st.session_state.generated_questions = []
+                st.session_state.used_chunks = set()
+
+                st.session_state.history.append({
+                    "type": "dimension",
+                    "dimension": current_dimension(),
+                    "definition": current_dimension_def()
+                })
+
+                # immediately start the next dimension
+                question, source = generate_next_question(full_answer)
+
+                if question:
+                    st.session_state.current_question = question
+                    st.session_state.current_source = source
+                else:
+                    st.session_state.questionnaire_finished = True
+
+            else:
+                st.session_state.questionnaire_finished = True
 
         st.session_state.input_counter += 1
         st.rerun()
