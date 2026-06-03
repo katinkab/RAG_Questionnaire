@@ -1,34 +1,32 @@
 from langchain_core.prompts import PromptTemplate
 
 QUESTIONNAIRE_PROMPT = PromptTemplate(
-    input_variables=["context_chunks", "dataset_info", "generated_questions", "dimension"], 
+    input_variables=["context_chunks", "dataset_info", "generated_questions", "dimension"],
     template="""<|im_start|>system
-    You are a data quality expert generating questionnaire questions. Respond only with <|im_start|>user
-    You evaluate the quality of a dataset on the dimension "{dimension}"
-    (The extent to which data values match real world knowledge.).
+You are a data quality expert generating questionnaire questions for AI medical datasets.<|im_end|>
+<|im_start|>user
+You are assessing the data quality dimension "{dimension}" for the following dataset:
+{dataset_info}
 
-    Use the context below as inspiration to generate exactly ONE yes/no question.
-    Reformulate the question to be specific to the dataset described above.
-    Use the dataset type and characteristics in your question rather than generic terms.
-    Context:
-    {context_chunks}
+Use the topics below as inspiration to identify what area to ask about next:
+{context_chunks}
 
-    Dataset information:
-    {dataset_info}
+Generate exactly ONE yes/no question that:
+- Is specific to the dataset described above
+- Covers a topic inspired by the context
+- Has not been asked before (see history below)
+- Uses natural medical language appropriate for the dataset
 
-    Already generated questions (do NOT repeat or ask anything with similar meaning):
-    {generated_questions}
+Already asked (do NOT repeat or ask anything with similar meaning):
+{generated_questions}
 
-    Collected information on the datset:
-    {dataset_info}
+Output only:
+Next question : <your yes/no question>
+<|im_end|>
+<|im_start|>assistant
+<think>
 
-    Output only in this format:
-    Next question : <your yes/no question>
-    Source: <name of the source document the question is based on>
-    <|im_end|>
-    <|im_start|>assistant
-    <think>
+</think>
 
-   </think>
-    """
+"""
 )
