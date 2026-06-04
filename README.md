@@ -1,19 +1,10 @@
 # RAG Questionnaire
 
-Generate questions in an interactive questionnaire.
-Use RAG (retriever + LLM) to generate a customized question.
+An interactive questionnaire system for qualitative data quality assessment of AI medical datasets. Uses Retrieval-Augmented Generation (RAG) to generate dataset-specific questions grounded in established data quality standards and guidelines.
 
-**Pipeline**
+## Overview
 
-PDF text extraction:
-Read text from scientific PDFs.
-
-Chunk & clean text:
-Split long text into chunks suitable for embedding.
-
-Create embeddings:
-Encode chunks into vectors.
-Build a vector store for fast retrieval.
-
-Retrieve relevant chunks:
-Based on a user prompt
+This system automatically generates customized data quality questionnaires by combining:
+- **Retrieval** of relevant knowledge from scientific standards 
+- **Generation** of dataset-specific yes/no questions using a large language model
+- **Interactive** multi-dimension assessment
