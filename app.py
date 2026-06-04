@@ -169,7 +169,7 @@ for item in st.session_state.history:
             #Dimension header block
             if item.get("type") == "dimension":
                 st.subheader(f"Dimension: {item['dimension']}")
-                st.caption(item["definition"])
+                #st.caption(item["definition"])
                 st.divider()
                 continue
 
@@ -195,11 +195,11 @@ if st.session_state.current_question is None and not st.session_state.history:
 
             st.session_state.dimension_index = 0
 
-            # ✅ ADD THIS HERE (first dimension header)
+            # (first dimension header)
             st.session_state.history.append({
                 "type": "dimension",
                 "dimension": current_dimension(),
-                "definition": current_dimension_def()
+                #"definition": current_dimension_def()
             })
 
             with st.spinner("Generating first question..."):
@@ -223,10 +223,10 @@ elif st.session_state.questionnaire_finished:
     summary_text = ""
 
     for item in st.session_state.history:
-        #Dimension header block
+
         if item.get("type") == "dimension":
             st.subheader(f"Dimension: {item['dimension']}")
-            st.caption(item["definition"])
+            summary_text += f"\n--- {item['dimension']} ---\n\n"  # add this line
             st.divider()
             continue
 
@@ -258,7 +258,7 @@ elif st.session_state.questionnaire_finished:
 elif st.session_state.current_question:
 
     st.caption(
-        f"Dimension: {current_dimension()} — {current_dimension_def()}"
+        f"Dimension: {current_dimension()} "
     )
 
     st.subheader("Current question")

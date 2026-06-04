@@ -22,6 +22,7 @@ Already asked (do NOT repeat or ask anything with similar meaning):
 
 Output only:
 Next question : <your yes/no question>
+Source: <name of the source document from the context that inspired this question>
 <|im_end|>
 <|im_start|>assistant
 <think>

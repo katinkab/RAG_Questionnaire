@@ -23,7 +23,7 @@ class RAGChain:
             n_threads=16,
             n_batch=1024,
             n_gpu_layers=-1,
-	    repeat_penalty=1.2,
+	        repeat_penalty=1.2,
             verbose=False
         )
 
